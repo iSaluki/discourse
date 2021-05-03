@@ -132,8 +132,44 @@ discourseModule(
       },
     });
 
+    componentTest("shows 'This Weekend' if it's enabled", {
+      template: hbs`
+        {{future-date-input-selector
+          includeWeekend=true
+        }}
+      `,
+
+      async test(assert) {
+        await this.subject.expand();
+        const options = getOptions();
+        const thisWeekend = I18n.t("topic.auto_update_input.this_weekend");
+
+        assert.ok(options.includes(thisWeekend));
+      },
+    });
+
+    componentTest("doesn't show 'This Weekend' on Fridays", {
+      template: hbs`
+        {{future-date-input-selector
+          includeWeekend=true
+        }}
+      `,
+
+      beforeEach() {
+        this.clock = fakeTime("2021-04-23 18:00:00", "UTC", true); // Friday
+      },
+
+      async test(assert) {
+        await this.subject.expand();
+        const options = getOptions();
+        const thisWeekend = I18n.t("topic.auto_update_input.this_weekend");
+
+        assert.not(options.includes(thisWeekend));
+      },
+    });
+
     componentTest(
-      "shows 'Later This Week' instead of' 'Later Today' at the end of the day",
+      "shows 'Later This Week' instead of 'Later Today' at the end of the day",
       {
         template: hbs`{{future-date-input-selector}}`,
 
@@ -184,26 +220,6 @@ discourseModule(
         const options = getOptions();
         const nextWeek = I18n.t("topic.auto_update_input.next_week");
         assert.not(options.includes(nextWeek));
-      },
-    });
-
-    componentTest("doesn't show 'This Weekend' on Fridays", {
-      template: hbs`
-        {{future-date-input-selector
-          includeWeekend=true
-        }}
-      `,
-
-      beforeEach() {
-        this.clock = fakeTime("2021-04-23 18:00:00", "UTC", true); // Friday
-      },
-
-      async test(assert) {
-        await this.subject.expand();
-        const options = getOptions();
-        const thisWeekend = I18n.t("topic.auto_update_input.this_weekend");
-
-        assert.not(options.includes(thisWeekend));
       },
     });
 
