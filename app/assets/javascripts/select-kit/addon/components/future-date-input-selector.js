@@ -4,6 +4,10 @@ import I18n from "I18n";
 import { computed } from "@ember/object";
 import { equal } from "@ember/object/computed";
 import { isEmpty } from "@ember/utils";
+import {
+  defaultShortcutOptions,
+  timeShortcutOptions,
+} from "discourse/lib/time-shortcut";
 
 const TIMEFRAME_BASE = {
   enabled: () => true,
@@ -116,6 +120,7 @@ export const TIMEFRAMES = [
 ];
 
 let _timeframeById = null;
+
 export function timeframeDetails(id) {
   if (!_timeframeById) {
     _timeframeById = {};
@@ -142,31 +147,55 @@ export default ComboBoxComponent.extend(DatetimeMixin, {
   },
 
   content: computed("statusType", function () {
-    const now = moment();
-    const canScheduleLaterToday = 24 - now.hour() > 6;
-    const canScheduleLaterThisWeek = !canScheduleLaterToday && now.day() < 4;
-    const canScheduleThisWeekend = now.day() < 5 && this.includeWeekend;
-    const canScheduleNextWeek = now.day() !== 0;
-    const canScheduleNextMonth = now.date() !== moment().endOf("month").date();
+    // const now = moment();
+    // const canScheduleLaterToday = 24 - now.hour() > 6;
+    // const canScheduleLaterThisWeek = !canScheduleLaterToday && now.day() < 4;
+    // const canScheduleThisWeekend = now.day() < 5 && this.includeWeekend;
+    // const canScheduleNextWeek = now.day() !== 0;
+    // const canScheduleNextMonth = now.date() !== moment().endOf("month").date();
+    //
+    // const opts = {
+    //   includeFarFuture: this.includeFarFuture,
+    //   includeDateTime: this.includeDateTime,
+    //   canScheduleLaterToday: canScheduleLaterToday,
+    //   canScheduleLaterThisWeek: canScheduleLaterThisWeek,
+    //   canScheduleThisWeekend: canScheduleThisWeekend,
+    //   canScheduleNextWeek: canScheduleNextWeek,
+    //   canScheduleNextMonth: canScheduleNextMonth,
+    // };
 
-    const opts = {
-      includeFarFuture: this.includeFarFuture,
-      includeDateTime: this.includeDateTime,
-      canScheduleLaterToday: canScheduleLaterToday,
-      canScheduleLaterThisWeek: canScheduleLaterThisWeek,
-      canScheduleThisWeekend: canScheduleThisWeekend,
-      canScheduleNextWeek: canScheduleNextWeek,
-      canScheduleNextMonth: canScheduleNextMonth,
-    };
+    let options = defaultShortcutOptions("UTC" /*userTimezone*/); // fixme use real timezone here and in tests
 
-    return TIMEFRAMES.filter((tf) => tf.enabled(opts)).map((tf) => {
-      return {
-        id: tf.id,
-        name: I18n.t(`topic.auto_update_input.${tf.id}`),
-        datetime: this._computeDatetimeForValue(tf.id),
-        icons: this._computeIconsForValue(tf.id),
-      };
+    const optionsBuilder = timeShortcutOptions("UTC"); // fixme use real timezone
+    options.push(optionsBuilder.two_weeks());
+    options.push(optionsBuilder.two_months());
+    options.push(optionsBuilder.three_months());
+    options.push(optionsBuilder.four_months());
+    options.push(optionsBuilder.six_months());
+    options.push(optionsBuilder.one_year());
+    options.push(optionsBuilder.forever()); // fixme set displayWhen for forever to false
+
+    // fixme make sorting shorter
+    options.sort((a, b) => {
+      if (a.time < b.time) {
+        return -1;
+      }
+      if (a.time > b.time) {
+        return 1;
+      }
+      return 0;
     });
+
+    return options
+      .filter((option) => !option.hidden)
+      .map((option) => {
+        return {
+          id: option.id,
+          name: I18n.t(option.label),
+          datetime: option.time,
+          icons: [option.icon],
+        };
+      });
   }),
 
   actions: {
